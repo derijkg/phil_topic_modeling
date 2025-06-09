@@ -1,0 +1,14 @@
+*.pyc
+*.db
+*.sqlite3
+final_bertopic_model_optimized_full_data
+final_bertopic_model_optimized_main_cluster
+final_bertopic_model_optimized_subcluster2
+*.txt
+*.epub
+new_data/
+*.log
+*.zip
+*.yml
+*.final_bertopic_model_optimized_main_cluster
+*.json
