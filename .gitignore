@@ -12,3 +12,10 @@ new_data/
 *.yml
 *.final_bertopic_model_optimized_main_cluster
 *.json
+*.csv
+histbert/tf/1800_models_final_after_56break_model.ckpt-250000.data-00000-of-00001
+histbert/tf/1800_models_final_after_56break_model.ckpt-250000.index
+histbert/tf/1800_models_final_after_56break_model.ckpt-250000.meta
+histbert/pytorch_model.bin
+pers_log
+my_utils.py
