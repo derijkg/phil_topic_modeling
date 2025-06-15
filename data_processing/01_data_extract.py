@@ -7,8 +7,8 @@ from bs4 import BeautifulSoup, NavigableString, Tag # Import Tag
 
 # --- Configuration ---
 INPUT_EPUB_FOLDER = r"input\epubs"  # Folder containing your EPUB files
-OUTPUT_TEXT_FOLDER = "extracted_texts"
-OUTPUT_METADATA_CSV = "gutenberg_metadata.csv"
+OUTPUT_TEXT_FOLDER = "test\extracted_texts"
+OUTPUT_METADATA_CSV = "test\gutenberg_metadata.csv"
 
 # --- Helper Functions ---
 def sanitize_filename(name):
@@ -103,29 +103,51 @@ def process_gutenberg_epubs(epub_folder, text_output_folder, metadata_csv_file):
                 output_text_filename = f"{safe_title} - {safe_author}.txt"
                 output_text_path = os.path.join(text_output_folder, output_text_filename)
 
-                # 3. Extract and Segment Text - MODIFIED SECTION
+                # 3. Extract and Segment Text with Chapter Detection
                 full_text_content_parts = []
-
-                # Iterate through items to find chapter and paragraph elements
+                
+                # Get all documents from the book's "spine" (the reading order)
                 for item in book.spine:
                     doc_item = book.get_item_with_id(item[0])
-                    if not doc_item or doc_item.get_type() != ebooklib.ITEM_DOCUMENT:
+                    if doc_item.get_type() != ebooklib.ITEM_DOCUMENT:
                         continue
 
                     soup = BeautifulSoup(doc_item.get_content(), 'html.parser')
-                    body_content = soup.find('body')  # CHANGE omit looking for body -> content_start / _end , get surrounding text, insert back later
+                    body_content = soup.find('body')
                     if not body_content:
                         continue
-                    paragraphs = body_content.find_all('p')
-                    for p in paragraphs:
-                        text = p.get_text(separator=' ', strip=True)
-                        if text:
-                            full_text_content_parts.append(text)  #took out big chunk here
-
-                                                               
-                # 4. Write Text File (same as before)
+                    
+                    # Find all header (h1-h6) and paragraph (p) tags in document order
+                    for element in body_content.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p']):
+                        # --- Boilerplate Filtering ---
+                        # Skip elements that are likely Gutenberg headers/footers/TOCs
+                        element_classes = element.get('class', [])
+                        text_for_check = element.get_text(" ", strip=True).upper()
+                        if 'pg-boilerplate' in element_classes or 'toc' in element_classes or 'pgheader' in element_classes:
+                            continue
+                        if ("PROJECT GUTENBERG" in text_for_check and "EBOOK" in text_for_check) or \
+                           "*** START OF" in text_for_check or "*** END OF" in text_for_check:
+                            continue
+                        
+                        # --- Chapter and Paragraph Processing ---
+                        if element.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+                            chapter_title = element.get_text(separator=' ', strip=True)
+                            # Add chapter marker and title if it looks like a real title
+                            if chapter_title and len(chapter_title) > 2:
+                                full_text_content_parts.append(f"\n\nCHAPTER_BREAK\n{chapter_title}\n")
+                        
+                        elif element.name == 'p':
+                            paragraph_text = element.get_text(separator=' ', strip=True)
+                            # Add paragraph if it has meaningful content
+                            if paragraph_text and len(paragraph_text) > 10:
+                                full_text_content_parts.append(paragraph_text)
+                
+                # 4. Write Text File 
                 with open(output_text_path, 'w', encoding='utf-8') as f:
+                    # Join all parts with a paragraph break marker in between
                     f.write("\nPARAGRAPH_BREAK\n".join(full_text_content_parts))
+                # --- MODIFIED SECTION END ---
+
                 print(f"  Extracted text to: {output_text_path}")
                 processed_files_count += 1
 
@@ -133,33 +155,43 @@ def process_gutenberg_epubs(epub_folder, text_output_folder, metadata_csv_file):
                 print(f"  Error processing {filename}: {e}")
                 failed_files_count +=1
 
-    # 5. Write Metadata CSV (same as before)
+    # ... (rest of the script is unchanged)
     if all_metadata_entries:
-        csv_fieldnames = [
-            "Original Title", "Original Writer", "Publication Year (Original)",
-            "Translator/Contributor", "Publication Year (Version)", "Source EPUB"
-        ]
+        csv_fieldnames = list(all_metadata_entries[0].keys())
         with open(metadata_csv_file, 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=csv_fieldnames)
             writer.writeheader()
             writer.writerows(all_metadata_entries)
         print(f"\nMetadata written to: {metadata_csv_file}")
-    else:
-        print("\nNo metadata extracted (no EPUBs processed successfully or none found).")
-
-    print(f"\n--- Summary ---")
-    print(f"Total EPUBs attempted: {processed_files_count + failed_files_count}")
-    print(f"Successfully processed: {processed_files_count}")
-    print(f"Failed to process: {failed_files_count}")
-    print("Done.")
-
+    print(f"\n--- Summary ---\nSuccessfully processed: {processed_files_count}\nFailed: {failed_files_count}")
 # --- Run the script ---
-if __name__ == "__main__":
-    if not os.path.exists(INPUT_EPUB_FOLDER):
-        os.makedirs(INPUT_EPUB_FOLDER)
-        print(f"Created input folder: '{INPUT_EPUB_FOLDER}'. Please place your EPUB files there.")
 
+
+if __name__ == "__main__":
     process_gutenberg_epubs(INPUT_EPUB_FOLDER, OUTPUT_TEXT_FOLDER, OUTPUT_METADATA_CSV)
+    EXCLUDED_TEXTS = ['Leviathan - Thomas Hobbes.txt',
+                  'Nathan the Wise; a dramatic poem in five acts - Gotthold Ephraim Lessing.txt',
+                  'The Communist Manifesto - Karl Marx, Friedrich Engels.txt',
+                  'The Fable of the Bees; Or, Private Vices, Public Benefits - Bernard Mandeville.txt',
+                  "Hegel's Philosophy of Mind - Georg Wilhelm Friedrich Hegel.txt", #NOT ORIGINAL
+                  'An Inquiry Into the Nature and Causes of the Wealth of Nations - Adam Smith, M. Garnier.txt',
+                  'Primitive culture, vol. 1 (of 2) - Edward B. Tylor.txt',
+                  'Primitive culture, vol. 2 (of 2) - Edward B. Tylor.txt',
+                  'Second Treatise of Government - John Locke.txt', #old langUAGE
+                  'The Writings of Thomas Paine — Volume 4 (1794-1796)_ The Age of Reason - Thomas Paine.txt',
+                  'Three Dialogues Between Hylas and Philonous in Opposition to Sceptics and Atheists - George Berkeley.txt', #DIALOGUE
+                  'Thus Spake Zarathustra_ A Book for All and None - Friedrich Wilhelm Nietzsche.txt', # dialogue / parable
+                  'On the Origin of Species By Means of Natural Selection _ Or, the Preservation of Favoured Races in the Struggle for Life - Charles Darwin.txt', #very different topics
+                  'An Inquiry into the Nature and Causes of the Wealth of Nations - Adam Smith.txt',
+                  'The Descent of Man, and Selection in Relation to Sex - Charles Darwin.txt',
+                  'Auguste Comte and Positivism - John Stuart Mill.txt'
+
+                  ]
+
+    for f in os.listdir(OUTPUT_TEXT_FOLDER):
+        if f in EXCLUDED_TEXTS:
+            os.remove(os.path.join(OUTPUT_TEXT_FOLDER,f))
+            print(f"Removed excluded file: {f}")
 
 
 # Find all h2 (for chapters) and p (for paragraphs) tags in order
