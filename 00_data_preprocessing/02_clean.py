@@ -35,9 +35,9 @@ authors_note_pattern = re.compile(r' ?—( Author’s Note .) ?', re.IGNORECASE)
 num_pattern = re.compile(r' ?\(\d+?\) ?')
 reference_pattern = re.compile(r' ?\[.+?\] ?', re.DOTALL)
 section_symbol_pattern = re.compile(r' ?§ ?\d* ?\.? ?')
-starting_number_pattern = re.compile(r'\n( ?\d+ ?\.? ?)')
+starting_number_pattern = re.compile(r'^\d+\.?\s*')
 tab_pattern = re.compile(r'( *\t  *)')
-numeral_start_pattern = re.compile(r'\n( ?[IVXCM]+\. ?)')
+numeral_start_pattern = re.compile(r'( ?[IVXCM]+\. ?)') # ???
 num_parenth_pattern = re.compile(r' ?\(\d+?:?\d+?\) ?')
 arrow_pattern = re.compile(r' ?[↑↓↩↪]+ ?')
 connexion_pattern = re.compile(r'connexion', re.IGNORECASE)
@@ -80,7 +80,7 @@ class Cleaner:
         content = re.sub(authors_note_pattern, ' ', content) # remove author notes
         content = re.sub(num_pattern,' ',content) # (1265)\s
         content = re.sub(reference_pattern, ' ', content) # references
-        content = re.sub(starting_number_pattern, ' ', content) # starting with number.
+        content = re.sub(starting_number_pattern, '', content) # starting with number.
         content = re.sub(section_symbol_pattern, ' ', content) # section symbols
         content = re.sub(tab_pattern, ' ', content) # remove tabs
         content = re.sub(numeral_start_pattern,' ',content)
@@ -119,8 +119,7 @@ class Cleaner:
             metadata = row.iloc[0].to_dict()
             return metadata
         else:
-            print(f'Metadata not found for {title}')
-            return 'error'
+            raise ValueError(f'No metadata found for {tail}')
         
 
     def split_chapters(self, content):
