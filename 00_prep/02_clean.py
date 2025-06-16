@@ -3,6 +3,8 @@ import os
 import re
 import json
 import pandas as pd
+from collections import defaultdict
+import numpy as np
 
 excluded_texts = ['Leviathan - Thomas Hobbes.txt', # old lang
                   'Nathan the Wise; a dramatic poem in five acts - Gotthold Ephraim Lessing.txt', # poem
@@ -30,18 +32,29 @@ content_pattern = re.compile(r'CONTENT_START(.*?)CONTENT_END', re.DOTALL)
 paragraph_break_pattern = re.compile(r'PARAGRAPH_BREAK')
 chapter_break_pattern = re.compile(r'CHAPTER_BREAK')
 
+# paragraph remover
+authors_note_pattern = re.compile(r"^\d+?\*")
+
 # clean
-authors_note_pattern = re.compile(r' ?—( Author’s Note .) ?', re.IGNORECASE)
+newline_pattern = re.compile(r' ?\n ?')
+authors_ast_pattern = re.compile(r' ?\d+?\* ?') # 2*, 45*
 num_pattern = re.compile(r' ?\(\d+?\) ?')
 reference_pattern = re.compile(r' ?\[.+?\] ?', re.DOTALL)
-section_symbol_pattern = re.compile(r' ?§ ?\d* ?\.? ?')
+section_symbol_pattern = re.compile(r'^§+ ?\d* ?\.? ?') # start of paragraph section + num
 starting_number_pattern = re.compile(r'^\d+\.?\s*')
 tab_pattern = re.compile(r'( *\t  *)')
-numeral_start_pattern = re.compile(r'( ?[IVXCM]+\. ?)') # ???
 num_parenth_pattern = re.compile(r' ?\(\d+?:?\d+?\) ?')
+#numeral_start_pattern = re.compile(r'^\(?[IVXCM]+\)?\. ?') # ???
+numeral_start_pattern = re.compile(
+    r'^\s*M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})\.\s*',
+    re.IGNORECASE
+)
 arrow_pattern = re.compile(r' ?[↑↓↩↪]+ ?')
 connexion_pattern = re.compile(r'connexion', re.IGNORECASE)
 asterisk_pattern = re.compile(r' ?\* ?')
+# spaced_ellipsis_pattern = re.compile(r'(?: \.){2,}')
+end_num_pattern = re.compile(r'\s*\d+\s*$')
+'''
 end_num_pattern = re.compile(r'(?<=[\.?!]) \d+ ?([A-Z])?')
 def end_num_replacer(match):
   """
@@ -56,17 +69,13 @@ def end_num_replacer(match):
   else:
     # No letter was found (match was at the end of the string). Return nothing.
     return ''
+'''
 ### big_word_split_pattern = re.compile(r'(?<=.)[A-Z]{1}( )[A-Z]')
 
 # finishers
-space_comma_pattern = re.compile(r' ?, ?')
-space_period_pattern = re.compile(r'( ?\. ?)') # combine punct + space
+space_comma_pattern = re.compile(r' ,')
+space_period_pattern = re.compile(r' \.') # combine punct + space
 extra_space_pattern = re.compile(r' {2,}')
-newline_pattern = re.compile(r' ?\n ?')
-
-
-
-
 
 class Cleaner:
     def __init__(self, folder_path_in, folder_path_out, metadata='gutenberg_metadata.csv'):
@@ -75,29 +84,42 @@ class Cleaner:
         if not os.path.exists(self.folder_path_out):
             os.makedirs(self.folder_path_out)
         self.df = pd.read_csv(metadata)
+        self.removal_stats = defaultdict(int)
+
+    def _apply_regex_and_track(self, content, pattern_name, pattern, replacement):
+        """Applies a regex substitution and tracks the number of matches removed."""
+        matches = pattern.findall(content)
+        self.removal_stats[pattern_name] += len(matches)
+
+        content = pattern.sub(replacement, content)
+        return content
 
     def clean(self, content):
-        content = re.sub(authors_note_pattern, ' ', content) # remove author notes
-        content = re.sub(num_pattern,' ',content) # (1265)\s
-        content = re.sub(reference_pattern, ' ', content) # references
-        content = re.sub(starting_number_pattern, '', content) # starting with number.
-        content = re.sub(section_symbol_pattern, ' ', content) # section symbols
-        content = re.sub(tab_pattern, ' ', content) # remove tabs
-        content = re.sub(numeral_start_pattern,' ',content)
-        content = re.sub(num_parenth_pattern,' ',content)
-        content = re.sub(arrow_pattern, ' ', content) # arrows
-        content = re.sub(connexion_pattern, 'connection', content)
-        content = re.sub(space_comma_pattern, ', ', content) # space before comma
-        content = end_num_pattern.sub(end_num_replacer, content)
-        content = re.sub(asterisk_pattern, ' ', content)
-        
-        # finishing touch
-        content = re.sub(newline_pattern, ' ', content)
-        content = re.sub(space_period_pattern, '. ', content)
-        content = re.sub(extra_space_pattern, ' ', content) # extra spaces
-        #content = re.sub(big_word_split_pattern,'',content) # artefacts of html like T REATISE
-        return content
-    
+        patterns_to_apply = [
+            ('newlines', newline_pattern, ' '),
+            ('author_ast', authors_ast_pattern, ' '),
+            ('parenthesized_numbers', num_pattern, ' '),
+            ('bracketed_references', reference_pattern, ' '),
+            ('paragraph_start_number', starting_number_pattern, ''),
+            ('section_symbols', section_symbol_pattern, ' '),
+            ('tabs', tab_pattern, ' '),
+            ('parenthesized_colond_numbers', num_parenth_pattern, ' '),
+            ('roman_numeral_start', numeral_start_pattern, ' '),
+            ('arrows', arrow_pattern, ' '),
+            ('connexion_to_connection', connexion_pattern, 'connection'),
+            ('end_of_sentence_number', end_num_pattern, ' '),
+            ('asterisks', asterisk_pattern, ' '),
+            ('space_before_comma', space_comma_pattern, ','),
+            ('space_before_period', space_period_pattern, '.'),
+        ]
+
+        for name, pattern, repl in patterns_to_apply:
+            content = self._apply_regex_and_track(content, name, pattern, repl)
+            # maintenence
+            content = re.sub(extra_space_pattern, ' ', content)
+            content = content.strip()
+
+        return content    
     def sanitize_filename(self, name):
         """Removes or replaces characters that are invalid in filenames."""
         name = re.sub(r'[<>:"/\\|?*]', '_', name)
@@ -109,14 +131,17 @@ class Cleaner:
         match = re.search(content_pattern, text)
         if match:
             return match.group(1).strip()
-        return ''
+        else:
+            raise ValueError(f'content indicators not found')
 
     def get_metadata(self, file_path):
         head, tail = os.path.split(file_path)
         title = tail.split(' - ')[0].strip()
         row = self.df[self.df['Original Title'].apply(self.sanitize_filename) == title]
         if not row.empty:
-            metadata = row.iloc[0].to_dict()
+            row_series = row.iloc[0]
+            cleaned_series = row_series.replace({np.nan: None})
+            metadata = cleaned_series.to_dict()
             return metadata
         else:
             raise ValueError(f'No metadata found for {tail}')
@@ -126,9 +151,10 @@ class Cleaner:
         chapters = re.split(chapter_break_pattern, content)
         chapter_list = []
         for idx, chapter in enumerate(chapters):
-            if chapter.strip() == '':
+            chapter = chapter.strip()
+            if chapter == '':
                 continue
-            if chapter.count('\n') +1 >=8:
+            if chapter.count('\n') +1 >=10:
                 chapter_list.append(chapter.strip())
         return chapter_list
    
@@ -136,11 +162,13 @@ class Cleaner:
         content = re.split(paragraph_break_pattern, content)
         paragraph_list = []
         for paragraph in content:
-
-            if paragraph.strip() == '':
+            paragraph = paragraph.strip()
+            if paragraph == '':
+                continue
+            if re.match(authors_note_pattern, paragraph):
+                print('SKIPPED AUT NOTE')
                 continue
             if paragraph.count('\n') +1 >= 5:
-                paragraph = paragraph.strip()
                 paragraph_list.append(paragraph)
         return paragraph_list
 
@@ -153,8 +181,7 @@ class Cleaner:
             content = file.read()
         content = self.extract_content(content)
         if content == '':
-            print(f'CONTENT NOT FOUND FOR {tail}')
-            return
+            raise ValueError(f'CONTENT NOT FOUND FOR {tail}')
         
         metadata = self.get_metadata(file_path)
         result  = {
@@ -163,21 +190,25 @@ class Cleaner:
         per_chapter = self.split_chapters(content)
         chapters_end = []
         for c_idx, chapter in enumerate(per_chapter):
+            chapter = chapter.strip()
+            if chapter == '':
+                print('SKIPPED EMPTY CHAPTER')
+                continue
             per_paragraph = self.split_paragraphs(chapter)
             paragraphs_end = []
             for p_idx, paragraph in enumerate(per_paragraph):
+                if paragraph == '':
+                    print('SKIPPED EMPTY PARAGRAPH')
+                    continue
                 paragraph = self.clean(paragraph)
                 paragraph = paragraph.strip()
                 if paragraph == '':
+                    print('SKIPPED EMPTY PARAGRAPH')
                     continue
                 else:
                     paragraphs_end.append(paragraph)
             chapters_end.append(paragraphs_end)
         result['content'] = chapters_end
-
-        save_path = os.path.join(self.folder_path_out,tail)
-        #with open(save_path,'w',encoding='utf-8') as f:
-        #    f.write(content)
         print(f'Processed {tail}')
         return result
     
@@ -197,7 +228,31 @@ class Cleaner:
                 result_all.append(result)
             with open(os.path.join(self.folder_path_out, 'all_processed.json'), 'w', encoding='utf-8') as f:
                 json.dump(result_all, f, ensure_ascii=False, indent=4)
+        self.report_stats()
         return result_all
+
+    def report_stats(self):
+        """Prints a formatted report of num of matches by each regex pattern."""
+        print("\n" + "="*50)
+        print("      Regex Pattern Match Statistics")
+        print("="*50)
+
+        if not self.removal_stats:
+            print("No statistics recorded.")
+            return
+
+        # Sort stats by characters removed, descending
+        sorted_stats = sorted(self.removal_stats.items(), key=lambda item: item[1], reverse=True)
+
+        print(f"{'Pattern Name':<35} | {'Matches'}")
+        print("-" * 50)
+        total_removed = 0
+        for name, count in sorted_stats:
+            print(f"{name:<35} | {count:,}")
+            total_removed += count
+        print("-" * 50)
+        print(f"{'Total matches':<35} | {total_removed:,}")
+        print("="*50 + "\n")
 
 if __name__ == '__main__':
     folder_path_in = r'extracted_texts_start_end'
