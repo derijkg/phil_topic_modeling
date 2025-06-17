@@ -29,16 +29,11 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-EMBEDDING_MODEL_NAME = 'all-MiniLM-L6-v2' # Consider 'all-MiniLM-L6-v2' for speed/less memory if quality is acceptable
-TOP_N_WORDS_FOR_COHERENCE = 10
-FINAL_MODEL_TOP_N_WORDS = 10
+EMBEDDING_MODEL_NAME = 'all-MiniLM-L6-v2'
+TOP_N_WORDS_FOR_COHERENCE = 20
+FINAL_MODEL_TOP_N_WORDS = 20
 STOP_WORDS_GNSM = stopwords.words('english')
 
-# !!! CRUCIAL FOR LARGE DATASETS !!!
-# Define a maximum number of documents for Optuna trials
-# Adjust this based on your available RAM. Start low (e.g., 50k-100k) and increase if stable.
-# For 1M+ sentences, even 100k might be a lot for many trials.
-# If len(DOCS) from your CSV is > MAX_DOCS_FOR_OPTUNA, subsampling will occur.
 MAX_DOCS_FOR_OPTUNA_TRIALS = 100_000 # Example: 100,000 sentences
 
 # --- Helper Functions ---

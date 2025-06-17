@@ -218,18 +218,22 @@ class Cleaner:
             result_all = self._process_file(path)
             out_file_name = os.path.join(self.folder_path_out, os.path.basename(path))
             out_file_name = out_file_name.replace('.txt', '.json')
-            with open(out_file_name, 'w', encoding='utf-8') as f:
-                json.dump(result_all, f, ensure_ascii=False, indent=4)
+            self.report_stats()
+            if result_all is not None:
+                return result_all, out_file_name
+            else:
+                raise ValueError('File is excluded')
+
         else:
             result_all = []
             for file in os.listdir(path):
                 file_path = os.path.join(path,file)
                 result = self._process_file(file_path)
-                result_all.append(result)
-            with open(os.path.join(self.folder_path_out, 'all_processed.json'), 'w', encoding='utf-8') as f:
-                json.dump(result_all, f, ensure_ascii=False, indent=4)
-        self.report_stats()
-        return result_all
+                if result is not None:
+                    result_all.append(result)
+            out_file_name = os.path.join(self.folder_path_out, 'all_processed.json')
+            self.report_stats()
+            return result_all, out_file_name
 
     def report_stats(self):
         """Prints a formatted report of num of matches by each regex pattern."""
@@ -259,5 +263,67 @@ if __name__ == '__main__':
     folder_path_out = r'cleaned_texts'
 
     cleaner = Cleaner(folder_path_in=folder_path_in,folder_path_out=folder_path_out)
-    #cleaner.process(r'data_processing\extracted_texts\A System of Logic, Ratiocinative and Inductive - John Stuart Mill.txt')
-    cleaner.process(folder_path_in)
+    results, out_file_name = cleaner.process(folder_path_in)
+    
+    # adding years
+    title_year = {
+        'A System of Logic, Ratiocinative and Inductive': 1843,
+        'A Theological-Political Treatise [Part III]': 1670,
+        'A Theological-Political Treatise [Part IV]': 1670,
+        'A Treatise Concerning the Principles of Human Knowledge': 1710,
+        'A Treatise of Human Nature': 1739,
+        'Aids to Reflection; and, The Confessions of an Inquiring Spirit': 1835,
+        'An Enquiry Concerning Human Understanding': 1748,
+        'An Enquiry Concerning the Principles of Morals': 1751,
+        'An Essay Concerning Humane Understanding, Volume 1 / MDCXC, Based on the 2nd Edition, Books 1 and 2': 1690,
+        'Analysis of the Phenomena of the Human Mind': 1829,
+        'Beyond Good and Evil': 1886,
+        'Chance, Love, and Logic: Philosophical Essays': 1923,
+        'Common Sense': 1776,
+        'Dialogues Concerning Natural Religion': 1779,
+        'Essays': '1741',
+        'Essays — First Series': 1841,
+        'Essays — Second Series': 1844,
+        'Ethics': 1677,
+        'First Principles': 1862,
+        'Fundamental Principles of the Metaphysic of Morals': 1785,
+        "Kant's Critique of Judgement": 1790,
+        "Kant's Prolegomena to Any Future Metaphysics": 1783,
+        'Laocoon': 1766,
+        'Letters on England': 1733,
+        'Nature': 1836,
+        'On Liberty': 1859,
+        'The Analogy of Religion to the Constitution and Course of Nature / To which are added two brief dissertations: I. On personal identity. II. On the nature of virtue.': 1736,
+        'The Birth of Tragedy; or, Hellenism and Pessimism': '1872',
+        'The Critique of Practical Reason': '1788',
+        'The Critique of Pure Reason': '1781',
+        'The Essence of Christianity / Translated from the second German edition': '1841',
+        'The Genealogy of Morals / The Complete Works, Volume Thirteen, edited by Dr. Oscar Levy.': '1887',
+        'The Golden Bough: A Study of Magic and Religion': '1890',
+        'The Principles of Psychology, Volume 1 (of 2)': '1890',
+        'The Social Contract & Discourses': '1762',
+        'The Subjection of Women': '1869',
+        'The Theory of Moral Sentiments / Or, an Essay Towards an Analysis of the Principles by Which Men Naturally Judge Concerning the Conduct and Character, First of Their Neighbours, and Afterwards of Themselves. to Which Is Added, a Dissertation on the Origin of Languages.': '1759',
+        'The Will to Believe, and Other Essays in Popular Philosophy': '1896',
+        'The Works of the Right Honourable Edmund Burke, Vol. 01 (of 12)': '1812',
+        'The Writings of Thomas Paine — Volume 2 (1779-1792): The Rights of Man': '1784',
+        'Theodicy / Essays on the Goodness of God, the Freedom of Man and the Origin of Evil': '1710',
+        'Theologico-Political Treatise — Part 1': '1670',
+        'Theologico-Political Treatise — Part 2': '1670',
+        'Utilitarianism': '1863'
+        }
+    title_year = {k: int(v) for k, v in title_year.items()}
+
+    for entry in results:
+        meta = entry.get('meta')
+        if meta:
+            title = meta.get('Original Title')
+            year = title_year.get(title)
+            meta['Publication Year (Original)'] = year
+            entry['meta'] = meta
+        else:
+            raise ValueError('META NOT FOUND')
+
+    # write
+    with open(out_file_name, 'w', encoding='utf-8') as f:
+        json.dump(results, f, ensure_ascii=False, indent=4)
