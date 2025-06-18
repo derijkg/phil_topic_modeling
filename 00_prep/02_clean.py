@@ -5,6 +5,7 @@ import json
 import pandas as pd
 from collections import defaultdict
 import numpy as np
+import pprint
 
 excluded_texts = ['Leviathan - Thomas Hobbes.txt', # old lang
                   'Nathan the Wise; a dramatic poem in five acts - Gotthold Ephraim Lessing.txt', # poem
@@ -268,7 +269,95 @@ class Cleaner:
 if __name__ == '__main__':
     folder_path_in = r'extracted_texts_start_end'
     folder_path_out = r'cleaned_texts'
+    
+    # add start, end
+    start = 'CONTENT_START'
+    end = 'CONTENT_END'
+    content_map = {'A System of Logic, Ratiocinative and Inductive - John Stuart Mill.txt': (862,
+                                                                            2242508),
+    'A Theological-Political Treatise [Part III] - Benedictus de Spinoza.txt': (2691,
+                                                                                94108),
+    'A Theological-Political Treatise [Part IV] - Benedictus de Spinoza.txt': (4911,
+                                                                                156965),
+    'A Treatise Concerning the Principles of Human Knowledge - George Berkeley.txt': (2345,
+                                                                                    216466),
+    'A Treatise of Human Nature - David Hume.txt': (386, 1438779),
+    'Aids to Reflection; and, The Confessions of an Inquiring Spirit - Samuel Taylor Coleridge.txt': (8456,
+                                                                                                    919513),
+    'An Enquiry Concerning Human Understanding - David Hume.txt': (642, 338910),
+    'An Enquiry Concerning the Principles of Morals - David Hume.txt': (2576,
+                                                                        267445),
+    'An Essay Concerning Humane Understanding, Volume 1 _ MDCXC, Based on the 2nd Edition, Books 1 and 2 - John Locke.txt': (1166,
+                                                                                                                            853983),
+    'Analysis of the Phenomena of the Human Mind - James Mill.txt': (4755,
+                                                                    1564367),
+    'Beyond Good and Evil - Friedrich Wilhelm Nietzsche.txt': (1484, 413197),
+    'Chance, Love, and Logic_ Philosophical Essays - Charles S. Peirce.txt': (6326,
+                                                                            519509),
+    'Common Sense - Thomas Paine.txt': (3654, 127328),
+    'Dialogues Concerning Natural Religion - David Hume.txt': (428, 217862),
+    'Essays - David Hume.txt': (13107, 214637),
+    'Essays — First Series - Ralph Waldo Emerson.txt': (783, 418204),
+    'Essays — Second Series - Ralph Waldo Emerson.txt': (449, 351573),
+    'Ethics - Benedictus de Spinoza.txt': (640, 517291),
+    'First Principles - Herbert Spencer.txt': (11653, 1036002),
+    'Fundamental Principles of the Metaphysic of Morals - Immanuel Kant.txt': (614,
+                                                                                181892),
+    "Kant's Critique of Judgement - Immanuel Kant.txt": (54869, 747982),
+    "Kant's Prolegomena to Any Future Metaphysics - Immanuel Kant.txt": (5380,
+                                                                        300837),
+    'Laocoon - Gotthold Ephraim Lessing.txt': (2801, 349076),
+    'Letters on England - Voltaire.txt': (5454, 222027),
+    'Nature - Ralph Waldo Emerson.txt': (260, 88563),
+    'On Liberty - John Stuart Mill.txt': (25751, 308855),
+    'The Analogy of Religion to the Constitution and Course of Nature _ To which are added two brief dissertations_ I. On personal identity. II. On the nat - Joseph Butler.txt': (80134,
+                                                                                                                                                                                    631626),
+    'The Birth of Tragedy; or, Hellenism and Pessimism - Friedrich Wilhelm Nietzsche.txt': (60316,
+                                                                                            330000),
+    'The Critique of Practical Reason - Immanuel Kant.txt': (604, 382690),
+    'The Critique of Pure Reason - Immanuel Kant.txt': (551, 1279814),
+    'The Essence of Christianity _ Translated from the second German edition - Ludwig Feuerbach.txt': (1236,
+                                                                                                        882494),
+    'The Genealogy of Morals _ The Complete Works, Volume Thirteen, edited by Dr. Oscar Levy. - Friedrich Wilhelm Nietzsche.txt': (2202,
+                                                                                                                                    334295),
+    'The Golden Bough_ A Study of Magic and Religion - James George Frazer.txt': (14167,
+                                                                                2303539),
+    'The Principles of Psychology, Volume 1 (of 2) - William James.txt': (906,
+                                                                        1664624),
+    'The Social Contract & Discourses - Jean-Jacques Rousseau.txt': (97653,
+                                                                    725819),
+    'The Subjection of Women - John Stuart Mill.txt': (700, 256118),
+    'The Theory of Moral Sentiments _ Or, an Essay Towards an Analysis of the Principles by Which Men Naturally Judge Concerning the Conduct and Character, - Adam Smith.txt': (1131,
+                                                                                                                                                                                688296),
+    'The Will to Believe, and Other Essays in Popular Philosophy - William James.txt': (1346,
+                                                                                        588633),
+    'The Works of the Right Honourable Edmund Burke, Vol. 01 (of 12) - Edmund Burke.txt': (131214,
+                                                                                            428437),
+    'The Writings of Thomas Paine — Volume 2 (1779-1792)_ The Rights of Man - Thomas Paine.txt': (295572,
+                                                                                                537005),
+    'Theodicy _ Essays on the Goodness of God, the Freedom of Man and the Origin of Evil - Freiherr von Gottfried Wilhelm Leibniz.txt': (108026,
+                                                                                                                                        1110283),
+    'Theologico-Political Treatise — Part 1 - Benedictus de Spinoza.txt': (3408,
+                                                                            177748),
+    'Theologico-Political Treatise — Part 2 - Benedictus de Spinoza.txt': (2696,
+                                                                            173236),
+    'Utilitarianism - John Stuart Mill.txt': (647, 162359)} 
+    if content_map == {}:
+        raise ValueError('No map')
+    elif len(content_map) == len(os.listdir(folder_path_in)):
+        for file, (start_pos, end_pos) in content_map.items():
+            file_path = os.path.join(folder_path_in,file)
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            if start and end not in content:
+                new_content = content[:start_pos] + start + content[start_pos:]
+                new_content = new_content[:end_pos] + end + new_content[end_pos:]
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+            else: continue
+    else: raise ValueError('not same len')
 
+    # clean
     cleaner = Cleaner(folder_path_in=folder_path_in,folder_path_out=folder_path_out)
     results, out_file_name = cleaner.process(folder_path_in)
     

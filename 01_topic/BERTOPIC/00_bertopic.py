@@ -37,28 +37,7 @@ STOP_WORDS_GNSM = stopwords.words('english')
 
 MAX_DOCS_FOR_OPTUNA_TRIALS = 100_000 # Example: 100,000 sentences
 
-# --- Helper Functions ---
-'''
-def preprocess_for_gensim_semi_aligned(documents, vectorizer):
-    """
-    Tokenizes documents using the analyzer from a CountVectorizer instance
-    to ensure alignment between BERTopic's internal tokenization and the
-    reference corpus for Gensim coherence.
-    """
-    analyzer = vectorizer.build_analyzer()
-    texts = []
-    for doc in documents:
-        try:
-            tokens = analyzer(doc)
-            # You might want an additional check to remove stopwords if the
-            # vectorizer doesn't do it, but CountVectorizer(stop_words='english') does.
-            texts.append(tokens)
-        except AttributeError:
-            logger.warning(f"Skipping non-string document in preprocess_for_gensim_aligned: {doc}")
-            texts.append([])
-    return texts
-'''
-
+# --- score functions ---
 def calculate_embedding_coherence(topic_word_lists, embedding_model):
     """
     Calculates the average cosine similarity between the embeddings of words in each topic.
