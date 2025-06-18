@@ -33,7 +33,8 @@ paragraph_break_pattern = re.compile(r'PARAGRAPH_BREAK')
 chapter_break_pattern = re.compile(r'CHAPTER_BREAK')
 
 # paragraph remover
-authors_note_pattern = re.compile(r"^\d+?\*")
+#authors_note_pattern = re.compile(r"^\d+?\*") actually belongs to james mill
+editor_pattern = re.compile(r'— Ed\.', re.IGNORECASE)
 
 # clean
 newline_pattern = re.compile(r' ?\n ?')
@@ -165,8 +166,11 @@ class Cleaner:
             paragraph = paragraph.strip()
             if paragraph == '':
                 continue
-            if re.match(authors_note_pattern, paragraph):
-                print('SKIPPED AUT NOTE')
+            #if re.match(authors_note_pattern, paragraph): # author notes are indicated by this pattern in 'analysis of the phenomena of the human mind by james mill
+            #    print('SKIPPED AUT NOTE')
+            #    continue
+            if re.search(editor_pattern, paragraph):
+                print('SKIPPED ED NOTE')
                 continue
             if paragraph.count('\n') +1 >= 5:
                 paragraph_list.append(paragraph)
@@ -187,8 +191,8 @@ class Cleaner:
         result  = {
             "meta": metadata
         }
-        per_chapter = self.split_chapters(content)
         chapters_end = []
+        per_chapter = self.split_chapters(content)
         for c_idx, chapter in enumerate(per_chapter):
             chapter = chapter.strip()
             if chapter == '':
@@ -208,6 +212,9 @@ class Cleaner:
                 else:
                     paragraphs_end.append(paragraph)
             chapters_end.append(paragraphs_end)
+        for chapter in chapters_end:                  # remove empty chapters after cleaning
+            if chapter == []:
+                chapters_end.remove(chapter)
         result['content'] = chapters_end
         print(f'Processed {tail}')
         return result

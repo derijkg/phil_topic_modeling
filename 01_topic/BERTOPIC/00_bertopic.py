@@ -21,7 +21,8 @@ from nltk.corpus import stopwords
 import logging
 from functools import partial
 import random # For subsampling
-
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 import json
 
 # --- 0. Global Settings ---
@@ -57,8 +58,6 @@ def preprocess_for_gensim_semi_aligned(documents, vectorizer):
             texts.append([])
     return texts
 '''
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
 
 def calculate_embedding_coherence(topic_word_lists, embedding_model):
     """
