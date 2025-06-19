@@ -342,6 +342,7 @@ if __name__ == '__main__':
     'Theologico-Political Treatise — Part 2 - Benedictus de Spinoza.txt': (2696,
                                                                             173236),
     'Utilitarianism - John Stuart Mill.txt': (647, 162359)} 
+    
     if content_map == {}:
         raise ValueError('No map')
     elif len(content_map) == len(os.listdir(folder_path_in)):
@@ -355,7 +356,10 @@ if __name__ == '__main__':
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(new_content)
             else: continue
-    else: raise ValueError('not same len')
+    else:
+        print('add content_start, end for following files:')
+        [print(f'{file}') for file in os.listdir(folder_path_in) if file not in content_map.keys()]
+        exit()
 
     # clean
     cleaner = Cleaner(folder_path_in=folder_path_in,folder_path_out=folder_path_out)
@@ -409,16 +413,21 @@ if __name__ == '__main__':
         'Utilitarianism': '1863'
         }
     title_year = {k: int(v) for k, v in title_year.items()}
-
-    for entry in results:
-        meta = entry.get('meta')
-        if meta:
-            title = meta.get('Original Title')
-            year = title_year.get(title)
-            meta['Publication Year (Original)'] = year
-            entry['meta'] = meta
-        else:
-            raise ValueError('META NOT FOUND')
+   
+    if len(results) == len(title_year):
+        for entry in results:
+            meta = entry.get('meta')
+            if meta:
+                title = meta.get('Original Title')
+                year = title_year.get(title)
+                meta['Publication Year (Original)'] = year
+                entry['meta'] = meta
+            else:
+                raise ValueError('META NOT FOUND')
+    elif len(results) != len(title_year):
+        print('Add years for following titles:')
+        [print(f'{entry['meta']['Original Title']}') for entry in results if entry['meta'].get('Original Title') not in title_year.keys()]
+        exit() # input???
 
     # write
     with open(out_file_name, 'w', encoding='utf-8') as f:

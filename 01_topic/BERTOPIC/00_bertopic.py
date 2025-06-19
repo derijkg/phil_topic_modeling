@@ -6,6 +6,7 @@ from umap import UMAP
 from sklearn.cluster import HDBSCAN # Using sklearn's version
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics import silhouette_score
+from sklearn.metrics.pairwise import cosine_similarity
 from bertopic import BERTopic
 from bertopic.vectorizers import ClassTfidfTransformer
 from bertopic.representation import KeyBERTInspired, MaximalMarginalRelevance
@@ -21,7 +22,6 @@ from nltk.corpus import stopwords
 import logging
 from functools import partial
 import random # For subsampling
-from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import json
 
@@ -30,7 +30,7 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-EMBEDDING_MODEL_NAME = 'all-MiniLM-L6-v2'
+EMBEDDING_MODEL_NAME = 'all-mpnet-base-v2'   #all-MiniLM-L6-v2'; default    # all-mpnet-base-v2 :   successor
 TOP_N_WORDS_FOR_COHERENCE = 20
 FINAL_MODEL_TOP_N_WORDS = 20
 STOP_WORDS_GNSM = stopwords.words('english')
@@ -138,7 +138,6 @@ def objective_function_with_data(trial, docs_list, embeddings_array, embedding_m
     logger.info(f"Params: {log_params}")
 
     # --- Model Instantiation ---
-    # ALWAYS use low_memory=True for UMAP with large N
     umap_model = UMAP(n_neighbors=umap_n_neighbors, n_components=umap_n_components, min_dist=umap_min_dist,
                       metric=metric, random_state=42, low_memory=True, verbose=False)
 
@@ -157,7 +156,7 @@ def objective_function_with_data(trial, docs_list, embeddings_array, embedding_m
                                             bm25_weighting=ctfidf_bm25_weighting)
 
     topic_model = BERTopic(
-        embedding_model=embedding_model_obj, # Embeddings are pre-computed and passed
+        embedding_model=embedding_model_obj,
         umap_model=umap_model,
         hdbscan_model=hdbscan_model,
         vectorizer_model=vectorizer_model,
@@ -165,7 +164,7 @@ def objective_function_with_data(trial, docs_list, embeddings_array, embedding_m
         representation_model=current_representation_model if representation_choice != 'default_ctfidf' else None,
         language="english",
         top_n_words=TOP_N_WORDS_FOR_COHERENCE,
-        calculate_probabilities=False, # Keep False for speed during Optuna
+        calculate_probabilities=False,
         verbose=False,
         nr_topics=nr_topics_suggestion
     )
@@ -341,7 +340,7 @@ if __name__ == "__main__":
         for item in data:
             end_data.extend(item.get('paragraphs'))
     except FileNotFoundError:
-        logger.error(r"Error: phil_nlp.csv not found. Please check the path.")
+        logger.error(r"Error: file not found. Please check the path.")
         exit()
     
     # using subset
