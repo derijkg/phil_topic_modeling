@@ -30,7 +30,9 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-EMBEDDING_MODEL_NAME = 'all-mpnet-base-v2'   #all-MiniLM-L6-v2'; default    # all-mpnet-base-v2 :   successor
+EMBEDDING_MODEL_NAME = 'all-mpnet-base-v2'   
+# all-MiniLM-L6-v2'; default    shorter len
+# all-mpnet-base-v2 :   successor, len 384 tokens
 TOP_N_WORDS_FOR_COHERENCE = 20
 FINAL_MODEL_TOP_N_WORDS = 20
 STOP_WORDS_GNSM = stopwords.words('english')

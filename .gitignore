@@ -19,3 +19,4 @@ histbert/tf/1800_models_final_after_56break_model.ckpt-250000.meta
 histbert/pytorch_model.bin
 pers_log
 99_working/
+*.parquet
