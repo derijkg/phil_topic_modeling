@@ -46,16 +46,56 @@ section_symbol_pattern = re.compile(r'^§+ ?\d* ?\.? ?') # start of paragraph se
 starting_number_pattern = re.compile(r'^\d+\.?\s*')
 tab_pattern = re.compile(r'( *\t  *)')
 num_parenth_pattern = re.compile(r' ?\(\d+?:?\d+?\) ?')
-#numeral_start_pattern = re.compile(r'^\(?[IVXCM]+\)?\. ?') # ???
-numeral_start_pattern = re.compile(
-    r'^\s*M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})\.\s*',
-    re.IGNORECASE
-)
+#numeral_start_pattern = re.compile(
+#    r'^\s*M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})\.\s*',
+#    re.IGNORECASE
+#)
 arrow_pattern = re.compile(r' ?[↑↓↩↪]+ ?')
 connexion_pattern = re.compile(r'connexion', re.IGNORECASE)
+old_you_pattern = re.compile(r'\b(thee|thou|thy)\b', re.IGNORECASE)
+old_your_pattern = re.compile(r'\b(thine)\b', re.IGNORECASE)
+old_has_pattern = re.compile(r'\b(hast|hath)\b', re.IGNORECASE)
+roman_numerals = re.compile(r'\b[IVXLCDM]+\b')
+def roman_to_int(s):
+    """Converts a Roman numeral string to an integer."""
+    s = s.upper()
+    roman_map = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000}
+    int_val = 0
+    for i in range(len(s)):
+        # This logic handles cases like IV (4) and IX (9)
+        if i > 0 and roman_map[s[i]] > roman_map[s[i - 1]]:
+            int_val += roman_map[s[i]] - 2 * roman_map[s[i - 1]]
+        else:
+            int_val += roman_map[s[i]]
+    return int_val
+
+def substitute_roman_numeral(match):
+    """
+    Substitution function for the 'roman_numerals' pattern.
+    Tries to convert the matched string to an integer. If successful,
+    returns the number as a word. If it fails, returns the original string.
+    """
+    roman_str = match.group(0)
+    try:
+        # We need to handle single-letter words like 'I' and 'A' which are not numerals.
+        # This check prevents "I am" from becoming "one am".
+        if len(roman_str) == 1 and roman_str.upper() not in ['V', 'X', 'L', 'C', 'D', 'M']:
+             return roman_str # It's likely the word 'I' or a single-letter initial.
+
+        integer_val = roman_to_int(roman_str)
+        
+        # You can choose the format you prefer:
+        # return str(integer_val)  # e.g., "19"
+        return str(integer_val) 
+    
+    except (KeyError, IndexError):
+        # The matched string was not a valid Roman numeral (e.g., 'HILL'),
+        # so we return it unchanged.
+        return roman_str
 asterisk_pattern = re.compile(r' ?\* ?')
 # spaced_ellipsis_pattern = re.compile(r'(?: \.){2,}')
-end_num_pattern = re.compile(r'\s*\d+\s*$')
+end_num_pattern = re.compile(r'\s*\d+\s*\.?$')
+# author note at end?
 '''
 end_num_pattern = re.compile(r'(?<=[\.?!]) \d+ ?([A-Z])?')
 def end_num_replacer(match):
@@ -76,7 +116,7 @@ def end_num_replacer(match):
 
 # finishers
 space_comma_pattern = re.compile(r' ,')
-space_period_pattern = re.compile(r' \.') # combine punct + space
+space_period_pattern = re.compile(r' \.')
 extra_space_pattern = re.compile(r' {2,}')
 
 class Cleaner:
@@ -106,7 +146,11 @@ class Cleaner:
             ('section_symbols', section_symbol_pattern, ' '),
             ('tabs', tab_pattern, ' '),
             ('parenthesized_colond_numbers', num_parenth_pattern, ' '),
-            ('roman_numeral_start', numeral_start_pattern, ' '),
+            ('old_you', old_you_pattern, 'you'),
+            ('old_your', old_your_pattern, 'your'),
+            ('old_has', old_has_pattern, 'has'),
+            ('roman_numerals', roman_numerals, substitute_roman_numeral),
+            #('roman_numeral_start', numeral_start_pattern, ' '),
             ('arrows', arrow_pattern, ' '),
             ('connexion_to_connection', connexion_pattern, 'connection'),
             ('end_of_sentence_number', end_num_pattern, ' '),

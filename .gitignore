@@ -20,3 +20,4 @@ histbert/pytorch_model.bin
 pers_log
 99_working/
 *.parquet
+*.ipynb

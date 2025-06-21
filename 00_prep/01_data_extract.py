@@ -1,11 +1,10 @@
-# after this, CONTENT_START and CONTENT_END are added to the text files
 import os
 import re
 import csv
 import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup, NavigableString, Tag # Import Tag
-excluded_texts = ['Leviathan - Thomas Hobbes.txt', # old lang
+EXCLUDED_TEXTS = ['Leviathan - Thomas Hobbes.txt', # old lang
                   'Nathan the Wise; a dramatic poem in five acts - Gotthold Ephraim Lessing.txt', # poem
                   'The Communist Manifesto - Karl Marx, Friedrich Engels.txt', # short para
                   'The Fable of the Bees; Or, Private Vices, Public Benefits - Bernard Mandeville.txt', # story
@@ -20,9 +19,11 @@ excluded_texts = ['Leviathan - Thomas Hobbes.txt', # old lang
                   'On the Origin of Species By Means of Natural Selection _ Or, the Preservation of Favoured Races in the Struggle for Life - Charles Darwin.txt', #very different topics
                   'An Inquiry into the Nature and Causes of the Wealth of Nations - Adam Smith.txt',
                   'The Descent of Man, and Selection in Relation to Sex - Charles Darwin.txt',
-                  'Auguste Comte and Positivism - John Stuart Mill.txt'
+                  'Auguste Comte and Positivism - John Stuart Mill.txt',
+                  'The Golden Bough_ A Study of Magic and Religion - James George Frazer.txt'
 
                   ]
+
 # --- Configuration ---
 INPUT_EPUB_FOLDER = r"input"  # Folder containing your EPUB files
 OUTPUT_TEXT_FOLDER = "extracted_texts"
@@ -191,24 +192,7 @@ def process_gutenberg_epubs(epub_folder, text_output_folder, metadata_csv_file):
 
 if __name__ == "__main__":
     process_gutenberg_epubs(INPUT_EPUB_FOLDER, OUTPUT_TEXT_FOLDER, OUTPUT_METADATA_CSV)
-    EXCLUDED_TEXTS = ['Leviathan - Thomas Hobbes.txt',
-                  'Nathan the Wise; a dramatic poem in five acts - Gotthold Ephraim Lessing.txt',
-                  'The Communist Manifesto - Karl Marx, Friedrich Engels.txt',
-                  'The Fable of the Bees; Or, Private Vices, Public Benefits - Bernard Mandeville.txt',
-                  "Hegel's Philosophy of Mind - Georg Wilhelm Friedrich Hegel.txt", #NOT ORIGINAL
-                  'An Inquiry Into the Nature and Causes of the Wealth of Nations - Adam Smith, M. Garnier.txt',
-                  'Primitive culture, vol. 1 (of 2) - Edward B. Tylor.txt',
-                  'Primitive culture, vol. 2 (of 2) - Edward B. Tylor.txt',
-                  'Second Treatise of Government - John Locke.txt', #old langUAGE
-                  'The Writings of Thomas Paine — Volume 4 (1794-1796)_ The Age of Reason - Thomas Paine.txt',
-                  'Three Dialogues Between Hylas and Philonous in Opposition to Sceptics and Atheists - George Berkeley.txt', #DIALOGUE
-                  'Thus Spake Zarathustra_ A Book for All and None - Friedrich Wilhelm Nietzsche.txt', # dialogue / parable
-                  'On the Origin of Species By Means of Natural Selection _ Or, the Preservation of Favoured Races in the Struggle for Life - Charles Darwin.txt', #very different topics
-                  'An Inquiry into the Nature and Causes of the Wealth of Nations - Adam Smith.txt',
-                  'The Descent of Man, and Selection in Relation to Sex - Charles Darwin.txt',
-                  'Auguste Comte and Positivism - John Stuart Mill.txt'
 
-                  ]
 
     for f in os.listdir(OUTPUT_TEXT_FOLDER):
         if f in EXCLUDED_TEXTS:
